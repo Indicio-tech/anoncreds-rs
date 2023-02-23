@@ -111,7 +111,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - if: |
-          !matrix.use_cross && !runner.os == "Windows"
+          !matrix.use_cross && !runner.os == 'Windows'
         name: Build library
         run: cargo build --release --package anoncreds --target ${{matrix.target}} --features vendored
 
