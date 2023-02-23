@@ -75,6 +75,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: true
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -109,29 +110,21 @@ jobs:
       - name: Cache cargo resources
         uses: Swatinem/rust-cache@v2
 
-      - if: '!matrix.use_cross'
+      - if: |
+          !matrix.use_cross && !runner.os == "Windows"
         name: Build library
-        env:
-          BUILD_TARGET: ${{ matrix.target }}
-          BUILD_TOOLCHAIN: ${{ matrix.toolchain || 'stable' }}
-          # LIBSQLITE3_FLAGS: SQLITE_DEBUG SQLITE_MEMDEBUG
-        shell: sh
-        run: ./build.sh
+        run: cargo build --release --package anoncreds --target ${{matrix.target}} --features vendored
 
       - if: matrix.use_cross
         name: Build library (cross)
         run: |
           cargo install --bins --git https://github.com/rust-embedded/cross --tag v0.2.4 cross
-          cross build --lib --release --target ${{ matrix.target }}
+          cross build --lib --release --package anoncreds --target ${{ matrix.target }} --features vendored
 
       - name: Build library for Windows
         if: "runner.os == 'Windows'"
         env:
           OPENSSL_STATIC: 1
-        run: cargo build --release --package anoncreds --target ${{matrix.target}} --features vendored
-
-      - name: Build library for macOS and Linux
-        if: "runner.os != 'Windows'"
         run: cargo build --release --package anoncreds --target ${{matrix.target}} --features vendored
 
       - name: Upload library artifacts
