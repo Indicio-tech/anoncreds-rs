@@ -81,6 +81,7 @@ jobs:
             arch: linux-x86_64
             target: x86_64-unknown-linux-gnu
             lib: libanoncreds.so
+            use_cross: true
           - os: macos-latest
             arch: darwin-x86_64
             lib: libanoncreds.dylib
@@ -107,6 +108,21 @@ jobs:
 
       - name: Cache cargo resources
         uses: Swatinem/rust-cache@v2
+
+      - if: '!matrix.use_cross'
+        name: Build library
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+          BUILD_TOOLCHAIN: ${{ matrix.toolchain || 'stable' }}
+          # LIBSQLITE3_FLAGS: SQLITE_DEBUG SQLITE_MEMDEBUG
+        shell: sh
+        run: ./build.sh
+
+      - if: matrix.use_cross
+        name: Build library (cross)
+        run: |
+          cargo install --bins --git https://github.com/rust-embedded/cross --tag v0.2.4 cross
+          cross build --lib --release --target ${{ matrix.target }}
 
       - name: Build library for Windows
         if: "runner.os == 'Windows'"
