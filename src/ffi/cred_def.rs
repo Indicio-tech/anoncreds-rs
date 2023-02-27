@@ -1,9 +1,10 @@
 use std::str::FromStr;
+use std::os::raw::c_char;
 
 use ffi_support::FfiStr;
 
 use super::error::{catch_error, ErrorCode};
-use super::object::ObjectHandle;
+use super::object::{ObjectHandle};
 use crate::data_types::cred_def::CredentialDefinition;
 use crate::services::{
     issuer::create_credential_definition,
@@ -69,6 +70,29 @@ impl_anoncreds_object_from_json!(
     CredentialDefinition,
     anoncreds_credential_definition_from_json
 );
+
+#[no_mangle]
+pub extern "C" fn anoncreds_credential_definition_get_attribute(
+    handle: ObjectHandle,
+    name: FfiStr,
+    result_p: *mut *const c_char,
+) -> ErrorCode {
+    catch_error(|| {
+        check_useful_c_ptr!(result_p);
+        let cred_def = handle.load()?;
+        let cred_def = cred_def.cast_ref::<CredentialDefinition>()?;
+        let val = match name.as_opt_str().unwrap_or_default() {
+            "schema_id" => match cred_def {
+                CredentialDefinition::CredentialDefinition(cred_def) => {
+                    cred_def.schema_id.to_string()
+                }
+            },
+            s => return Err(err_msg!("Unsupported attribute: {}", s)),
+        };
+        unsafe { *result_p = val};
+        Ok(())
+    })
+}
 
 impl_anoncreds_object!(CredentialDefinitionPrivate, "CredentialDefinitionPrivate");
 impl_anoncreds_object_from_json!(
